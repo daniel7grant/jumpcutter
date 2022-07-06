@@ -1,4 +1,13 @@
 # jumpcutter
+
+> Forked from [carykh/jumpcutter](https://github.com/carykh/jumpcutter)
+
+The original jumpcutter could separate parts of the video where there is silence and noise, and stitch it back up to one video. However this is still hard to use it in a real editing software (e.g. DaVinci Resolve).
+
+This code is changed so that it 1) creates separate clips from the video, so it can be reused, and 2) creates a FCP XML file that you can import into some editing software, primarily tested for DaVinci Resolve.
+
+## Original repo README.md
+
 Automatically edits videos. Explanation here: https://www.youtube.com/watch?v=DQ8orIurGxw
 
 Go here for a more polished version of this software that my friends and I have been working on fr the last year or so: https://jumpcutter.com/

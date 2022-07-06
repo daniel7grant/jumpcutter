@@ -9,6 +9,7 @@ import re
 import math
 from shutil import copyfile, rmtree
 import os
+import glob
 import argparse
 from pytube import YouTube
 
@@ -33,9 +34,13 @@ def copyFrame(inputFrame,outputFrame):
         print(str(outputFrame+1)+" time-altered frames saved.")
     return True
 
-def inputToOutputFilename(filename):
+def inputToXmlFilename(filename):
     dotIndex = filename.rfind(".")
-    return filename[:dotIndex]+"_ALTERED"+filename[dotIndex:]
+    return filename[:dotIndex]+".xml"
+
+def appendIdx(filename, i):
+    base, ext = filename.rsplit('.', 1)
+    return base + "_" + str(i) + "." + ext
 
 def createPath(s):
     #assert (not os.path.exists(s)), "The filepath "+s+" already exists. Don't want to overwrite it. Aborting."
@@ -45,6 +50,16 @@ def createPath(s):
     except OSError:  
         assert False, "Creation of the directory %s failed. (The TEMP folder may already exist. Delete or rename it, and try again.)"
 
+def deleteNewImages(s):
+    try:
+        fileList = glob.glob(s + '/newFrame*.jpg')
+        for filePath in fileList:
+            os.remove(filePath)
+    except OSError:
+        print ("Deletion of the directory %s failed" % s)
+        print(OSError)
+            
+
 def deletePath(s): # Dangerous! Watch out!
     try:  
         rmtree(s,ignore_errors=False)
@@ -52,10 +67,160 @@ def deletePath(s): # Dangerous! Watch out!
         print ("Deletion of the directory %s failed" % s)
         print(OSError)
 
+
+def addVideoClip(path, name, start, end, duration, frameRate):
+    return f'''
+<clipitem id="{name} 0">
+    <name>{name}</name>
+    <duration>{duration}</duration>
+    <rate>
+        <timebase>{frameRate}</timebase>
+        <ntsc>FALSE</ntsc>
+    </rate>
+    <start>{start}</start>
+    <end>{end}</end>
+    <enabled>TRUE</enabled>
+    <in>0</in>
+    <out>{duration}</out>
+    <file id="{name} 2">
+        <duration>{duration}</duration>
+        <rate>
+            <timebase>{frameRate}</timebase>
+            <ntsc>FALSE</ntsc>
+        </rate>
+        <name>{name}</name>
+        <pathurl>file://{os.path.join(path, name)}</pathurl>
+        <timecode>
+            <string>00:00:00:00</string>
+            <displayformat>NDF</displayformat>
+            <rate>
+                <timebase>{frameRate}</timebase>
+                <ntsc>FALSE</ntsc>
+            </rate>
+        </timecode>
+        <media>
+            <video>
+                <duration>{duration}</duration>
+                <samplecharacteristics>
+                    <width>1920</width>
+                    <height>1080</height>
+                </samplecharacteristics>
+            </video>
+            <audio>
+                <channelcount>2</channelcount>
+            </audio>
+        </media>
+    </file>
+    <compositemode>normal</compositemode>
+</clipitem>
+'''
+
+
+def addAudioClip(path, name, start, end, duration, frameRate):
+    return f'''
+<clipitem id="{name} 0">
+    <name>{name}</name>
+    <duration>{duration}</duration>
+    <rate>
+        <timebase>{frameRate}</timebase>
+        <ntsc>FALSE</ntsc>
+    </rate>
+    <start>{start}</start>
+    <end>{end}</end>
+    <enabled>TRUE</enabled>
+    <in>0</in>
+    <out>{duration}</out>
+    <file id="{name} 1">
+        <duration>{duration}</duration>
+        <rate>
+            <timebase>{frameRate}</timebase>
+            <ntsc>FALSE</ntsc>
+        </rate>
+        <name>{name}</name>
+        <pathurl>file://{os.path.join(path, name)}</pathurl>
+        <media>
+            <audio>
+                <channelcount>2</channelcount>
+            </audio>
+        </media>
+    </file>
+    <sourcetrack>
+        <mediatype>audio</mediatype>
+        <trackindex>1</trackindex>
+    </sourcetrack>
+    <comments/>
+</clipitem>
+'''
+
+def createXml(videoClips, audioClips, duration, frameRate):
+    return f'''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xmeml>
+<xmeml version="5">
+    <sequence>
+        <name>Timeline 1 (Resolve)</name>
+        <duration>{duration}</duration>
+        <rate>
+            <timebase>{frameRate}</timebase>
+            <ntsc>FALSE</ntsc>
+        </rate>
+        <in>-1</in>
+        <out>-1</out>
+        <timecode>
+            <string>01:00:00:00</string>
+            <frame>108000</frame>
+            <displayformat>NDF</displayformat>
+            <rate>
+                <timebase>{frameRate}</timebase>
+                <ntsc>FALSE</ntsc>
+            </rate>
+        </timecode>
+        <media>
+            <video>
+                <track>
+                    {" ".join(videoClips)}
+                    <enabled>TRUE</enabled>
+                    <locked>FALSE</locked>
+                </track>
+                <format>
+                    <samplecharacteristics>
+                        <width>1920</width>
+                        <height>1080</height>
+                        <pixelaspectratio>square</pixelaspectratio>
+                        <rate>
+                            <timebase>{frameRate}</timebase>
+                            <ntsc>FALSE</ntsc>
+                        </rate>
+                        <codec>
+                            <appspecificdata>
+                                <appname>Final Cut Pro</appname>
+                                <appmanufacturer>Apple Inc.</appmanufacturer>
+                                <data>
+                                    <qtcodec/>
+                                </data>
+                            </appspecificdata>
+                        </codec>
+                    </samplecharacteristics>
+                </format>
+            </video>
+            <audio>
+                <track>
+                    {" ".join(audioClips)}
+                    <enabled>TRUE</enabled>
+                    <locked>FALSE</locked>
+                </track>
+            </audio>
+        </media>
+    </sequence>
+</xmeml>
+'''
+
+
 parser = argparse.ArgumentParser(description='Modifies a video file to play at different speeds when there is sound vs. silence.')
 parser.add_argument('--input_file', type=str,  help='the video file you want modified')
 parser.add_argument('--url', type=str, help='A youtube url to download and process')
-parser.add_argument('--output_file', type=str, default="", help="the output file. (optional. if not included, it'll just modify the input file name)")
+parser.add_argument('--output_file', type=str, default="", help="the output file. (optional. if not included, it'll just be the input file name)")
+parser.add_argument('--output_path', type=str, default="", help="the location where it should put the output files. (by default: local directory)")
+parser.add_argument('--xml_file', type=str, default="", help="the XML timeline output. (default: the input file's name + .xml)")
 parser.add_argument('--silent_threshold', type=float, default=0.03, help="the volume amount that frames' audio needs to surpass to be consider \"sounded\". It ranges from 0 (silence) to 1 (max volume)")
 parser.add_argument('--sounded_speed', type=float, default=1.00, help="the speed that sounded (spoken) frames should be played at. Typically 1.")
 parser.add_argument('--silent_speed', type=float, default=5.00, help="the speed that silent frames should be played at. 999999 for jumpcutting.")
@@ -85,7 +250,17 @@ assert INPUT_FILE != None , "why u put no input file, that dum"
 if len(args.output_file) >= 1:
     OUTPUT_FILE = args.output_file
 else:
-    OUTPUT_FILE = inputToOutputFilename(INPUT_FILE)
+    OUTPUT_FILE = INPUT_FILE
+    
+if len(args.output_path) >= 1:
+    OUTPUT_PATH = os.path.abspath(args.output_path)
+else:
+    OUTPUT_PATH = os.getcwd()
+
+if len(args.xml_file) >= 1:
+    XML_FILE = os.path.join(OUTPUT_PATH, args.xml_file)
+else:
+    XML_FILE = os.path.join(OUTPUT_PATH, inputToXmlFilename(INPUT_FILE))
 
 TEMP_FOLDER = "TEMP"
 AUDIO_FADE_ENVELOPE_SIZE = 400 # smooth out transitiion's audio by quickly fading in/out (arbitrary magic number whatever)
@@ -149,6 +324,12 @@ chunks = chunks[1:]
 outputAudioData = np.zeros((0,audioData.shape[1]))
 outputPointer = 0
 
+path = os.getcwd()
+i = 0
+frameIndex = 0
+videoClips = []
+audioClips = []
+
 lastExistingFrame = None
 for chunk in chunks:
     audioChunk = audioData[int(chunk[0]*samplesPerFrame):int(chunk[1]*samplesPerFrame)]
@@ -187,18 +368,28 @@ for chunk in chunks:
         else:
             copyFrame(lastExistingFrame,outputFrame)
 
-    outputPointer = endPointer
+    if NEW_SPEED[int(chunk[2])] < 1.1:
+        outputPointer = endPointer
+        wavfile.write(TEMP_FOLDER+"/audioNew.wav",SAMPLE_RATE,outputAudioData)
+        
+        i += 1
+        filename = appendIdx(OUTPUT_FILE, i)
+        outputFile = os.path.join(OUTPUT_PATH, filename)
+        command = "ffmpeg -y -framerate "+str(frameRate)+" -i "+TEMP_FOLDER+"/newFrame%06d.jpg -i "+TEMP_FOLDER+"/audioNew.wav -strict -2 -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a pcm_s16le "+outputFile
+        subprocess.call(command, shell=True)
 
-wavfile.write(TEMP_FOLDER+"/audioNew.wav",SAMPLE_RATE,outputAudioData)
+        duration = endOutputFrame - startOutputFrame
+        videoClips.append(addVideoClip(OUTPUT_PATH, filename, frameIndex, frameIndex + duration, duration, frameRate))
+        audioClips.append(addAudioClip(OUTPUT_PATH, filename, frameIndex, frameIndex + duration, duration, frameRate))
+        frameIndex += duration
 
-'''
-outputFrame = math.ceil(outputPointer/samplesPerFrame)
-for endGap in range(outputFrame,audioFrameCount):
-    copyFrame(int(audioSampleCount/samplesPerFrame)-1,endGap)
-'''
+    outputPointer = 0
+    outputAudioData = np.zeros((0,audioData.shape[1]))
+        
+    deleteNewImages(TEMP_FOLDER)
 
-command = "ffmpeg -framerate "+str(frameRate)+" -i "+TEMP_FOLDER+"/newFrame%06d.jpg -i "+TEMP_FOLDER+"/audioNew.wav -strict -2 "+OUTPUT_FILE
-subprocess.call(command, shell=True)
+with open(XML_FILE, "w") as xml_file:
+    xml_file.write(createXml(videoClips, audioClips, frameIndex, frameRate))
 
 deletePath(TEMP_FOLDER)
 
