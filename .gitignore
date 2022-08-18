@@ -93,3 +93,11 @@ ENV/
 *.iml
 out
 gen
+
+# Video and FPX files
+*.mov
+*.mkv
+*.mp4
+*.avi
+*.wav
+*.xml

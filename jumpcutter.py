@@ -43,12 +43,11 @@ def appendIdx(filename, i):
     return base + "_" + str(i) + "." + ext
 
 def createPath(s):
-    #assert (not os.path.exists(s)), "The filepath "+s+" already exists. Don't want to overwrite it. Aborting."
-
-    try:  
-        os.mkdir(s)
-    except OSError:  
-        assert False, "Creation of the directory %s failed. (The TEMP folder may already exist. Delete or rename it, and try again.)"
+    if not os.path.exists(s):
+        try:  
+            os.mkdir(s)
+        except OSError:
+            pass
 
 def deleteNewImages(s):
     try:
@@ -271,7 +270,6 @@ command = "ffmpeg -i "+INPUT_FILE+" -qscale:v "+str(FRAME_QUALITY)+" "+TEMP_FOLD
 subprocess.call(command, shell=True)
 
 command = "ffmpeg -i "+INPUT_FILE+" -ab 160k -ac 2 -ar "+str(SAMPLE_RATE)+" -vn "+TEMP_FOLDER+"/audio.wav"
-
 subprocess.call(command, shell=True)
 
 command = "ffmpeg -i "+TEMP_FOLDER+"/input.mp4 2>&1"
@@ -368,6 +366,8 @@ for chunk in chunks:
         else:
             copyFrame(lastExistingFrame,outputFrame)
 
+    duration = endOutputFrame - startOutputFrame
+
     if NEW_SPEED[int(chunk[2])] < 1.1:
         outputPointer = endPointer
         wavfile.write(TEMP_FOLDER+"/audioNew.wav",SAMPLE_RATE,outputAudioData)
@@ -375,13 +375,14 @@ for chunk in chunks:
         i += 1
         filename = appendIdx(OUTPUT_FILE, i)
         outputFile = os.path.join(OUTPUT_PATH, filename)
-        command = "ffmpeg -y -framerate "+str(frameRate)+" -i "+TEMP_FOLDER+"/newFrame%06d.jpg -i "+TEMP_FOLDER+"/audioNew.wav -strict -2 -c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a pcm_s16le "+outputFile
+        extraFlags = "-c:v dnxhd -profile:v dnxhr_hq -pix_fmt yuv422p -c:a pcm_s16le" if OUTPUT_FILE.endswith('.mov') else ""
+        command = "ffmpeg -y -framerate "+str(frameRate)+" -i "+TEMP_FOLDER+"/newFrame%06d.jpg -i "+TEMP_FOLDER+"/audioNew.wav -strict -2 " + extraFlags + " " + outputFile
         subprocess.call(command, shell=True)
 
-        duration = endOutputFrame - startOutputFrame
         videoClips.append(addVideoClip(OUTPUT_PATH, filename, frameIndex, frameIndex + duration, duration, frameRate))
         audioClips.append(addAudioClip(OUTPUT_PATH, filename, frameIndex, frameIndex + duration, duration, frameRate))
-        frameIndex += duration
+
+    frameIndex += duration
 
     outputPointer = 0
     outputAudioData = np.zeros((0,audioData.shape[1]))
