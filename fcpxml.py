@@ -1,16 +1,19 @@
-from os import path
+from os import path, sep
 
 
 class FcpXmlBuilder:
     def __init__(self, sourceFile, dimensions, frameRate, duration):
-        self.sourceFile = sourceFile
         self.name = path.basename(sourceFile)
+        self.sourceFile = sourceFile.replace(sep, '/')
+        if not self.sourceFile.startswith('/'):
+            self.sourceFile = f"/{self.sourceFile}"
         (width, height) = dimensions
         self.width = width
         self.height = height
         self.frameRate = frameRate
         self.duration = duration
-        self.index = 0
+        self.fileIndex = 0 # for some reason the file index has to be different than clip index
+        self.index = 1
         self.frameIndex = 0
         self.videoClips = []
         self.audioClips = []
@@ -18,7 +21,6 @@ class FcpXmlBuilder:
     def addClip(self, start, end):
         self.addVideoClip(start, end)
         self.addAudioClip(start, end)
-        self.index += 1
         self.frameIndex += end - start
 
     def addVideoClip(self, start, end):
@@ -36,7 +38,7 @@ class FcpXmlBuilder:
                         <enabled>TRUE</enabled>
                         <in>{start}</in>
                         <out>{end}</out>
-                        <file id="{self.name} {self.index}">
+                        <file id="{self.name} {self.fileIndex}">
                             <duration>{self.duration}</duration>
                             <rate>
                                 <timebase>{self.frameRate}</timebase>
@@ -69,6 +71,7 @@ class FcpXmlBuilder:
                     </clipitem>
             '''
         )
+        self.index += 1
 
     def addAudioClip(self, start, end):
         self.audioClips.append(
@@ -85,7 +88,7 @@ class FcpXmlBuilder:
                         <enabled>TRUE</enabled>
                         <in>{start}</in>
                         <out>{end}</out>
-                        <file id="{self.name} {self.index}">
+                        <file id="{self.name} {self.fileIndex}">
                             <duration>{self.duration}</duration>
                             <rate>
                                 <timebase>{self.frameRate}</timebase>
@@ -107,6 +110,7 @@ class FcpXmlBuilder:
                     </clipitem>
             '''
         )
+        self.index += 1
 
     def dump(self):
         return f'''<?xml version="1.0" encoding="UTF-8"?>
@@ -168,4 +172,5 @@ class FcpXmlBuilder:
         </media>
     </sequence>
 </xmeml>
-'''
+'''        
+
