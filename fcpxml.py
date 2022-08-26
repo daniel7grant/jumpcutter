@@ -22,6 +22,7 @@ class FcpXmlBuilder:
         self.addVideoClip(start, end)
         self.addAudioClip(start, end)
         self.frameIndex += end - start
+        self.index += 2
 
     def addVideoClip(self, start, end):
         self.videoClips.append(
@@ -68,15 +69,21 @@ class FcpXmlBuilder:
                             </media>
                         </file>
                         <compositemode>normal</compositemode>
+                        <link>
+                            <linkclipref>{self.name} {self.index}</linkclipref>
+                        </link>
+                        <link>
+                            <linkclipref>{self.name} {self.index + 1}</linkclipref>
+                        </link>
+                        <comments/>
                     </clipitem>
             '''
         )
-        self.index += 1
 
     def addAudioClip(self, start, end):
         self.audioClips.append(
             f'''
-                    <clipitem id="{self.name} {self.index}">
+                    <clipitem id="{self.name} {self.index + 1}">
                         <name>{self.name}</name>
                         <duration>{self.duration}</duration>
                         <rate>
@@ -106,11 +113,17 @@ class FcpXmlBuilder:
                             <mediatype>audio</mediatype>
                             <trackindex>1</trackindex>
                         </sourcetrack>
+                        <link>
+                            <linkclipref>{self.name} {self.index}</linkclipref>
+                            <mediatype>video</mediatype>
+                        </link>
+                        <link>
+                            <linkclipref>{self.name} {self.index + 1}</linkclipref>
+                        </link>
                         <comments/>
                     </clipitem>
             '''
         )
-        self.index += 1
 
     def dump(self):
         return f'''<?xml version="1.0" encoding="UTF-8"?>
