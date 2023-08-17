@@ -57,7 +57,7 @@ fn main() -> Result<()> {
                     Sample::F32(sample::Type::Planar) => {
                         let mut data = decoded
                             .plane::<f32>(1)
-                            .into_iter()
+                            .iter()
                             .map(|d| d.abs() as f64)
                             .collect::<Vec<_>>();
 
@@ -78,11 +78,11 @@ fn main() -> Result<()> {
     let mut loud = 0f64;
     for data in volumes.chunks(frame_group) {
         // Calculate the average of the volume group
-        let avg = data.into_iter().map(|d| *d).sum::<f64>() / data.len() as f64;
+        let avg = data.iter().copied().sum::<f64>() / data.len() as f64;
         means.push(avg);
 
         let max = data
-            .into_iter()
+            .iter()
             .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(&loud);
         if *max > loud {
@@ -125,7 +125,7 @@ fn main() -> Result<()> {
     let xmlfile = args.xml_file.unwrap_or_else(|| {
         let xml = input.to_string_lossy().to_string();
 
-        let (start, _) = xml.rsplit_once(".").unwrap_or((&xml, ""));
+        let (start, _) = xml.rsplit_once('.').unwrap_or((&xml, ""));
 
         format!("{start}.xml")
     });
