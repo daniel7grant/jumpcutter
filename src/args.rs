@@ -15,12 +15,6 @@ pub struct Args {
     /// some silent frames adjacent to sounded frames are included to provide context. How many frames on either the side of speech should be included? That's this variable.
     #[arg(long, default_value_t = 1)]
     pub frame_margin: i32,
-    /// sample rate of the input and output videos
-    #[arg(long)]
-    pub sample_rate: Option<i32>,
-    /// frame rate of the input and output videos. optional... I try to find it out myself, but it doesn't always work.
-    #[arg(long)]
-    pub frame_rate: Option<i32>,
 }
 
 impl Args {
