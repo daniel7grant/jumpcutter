@@ -6,6 +6,7 @@ extern crate ffmpeg_next as ffmpeg;
 mod args;
 mod fcpxml;
 
+use std::cmp::{max, min};
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -94,23 +95,49 @@ fn main() -> Result<()> {
     let mut starts: Vec<usize> = vec![];
     let mut ends: Vec<usize> = vec![];
     let loud_threshold = loud * args.silent_threshold;
-    if means[0] > loud_threshold {
+    let is_louds = means
+        .into_iter()
+        .map(|m| m > loud_threshold)
+        .collect::<Vec<_>>();
+
+    // Add margins before and after
+    let is_louds = is_louds
+        .iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let start = if i > args.frame_margin {
+                i - args.frame_margin
+            } else {
+                0
+            };
+            let end = min(is_louds.len(), i + args.frame_margin);
+            is_louds[start..end].iter().any(|f| *f)
+        })
+        .collect::<Vec<_>>();
+
+    if is_louds[0] {
         // If the beginning is loud push it
         starts.push(0);
     }
-    for (index, &[first, second]) in means.array_windows::<2>().enumerate() {
-        if first < loud_threshold && second > loud_threshold {
+    for (index, &[first_loud, second_loud]) in is_louds.array_windows::<2>().enumerate() {
+        if !first_loud && second_loud {
             // Silent -> loud (start)
             starts.push(index);
-        } else if first > loud_threshold && second < loud_threshold {
+        } else if first_loud && !second_loud {
             // Loud -> silent (end)
             ends.push(index);
         }
     }
-    if means[means.len() - 1] < loud_threshold {
+    if !is_louds[is_louds.len() - 1] {
         // If the end is silent push it
-        starts.push(means.len() - 1);
+        ends.push(is_louds.len() - 1);
     }
+
+    dbg!(starts
+        .clone()
+        .into_iter()
+        .zip(ends.clone())
+        .collect::<Vec<_>>());
 
     let input = PathBuf::from(args.input_file).canonicalize()?;
 

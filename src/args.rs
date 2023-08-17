@@ -13,8 +13,8 @@ pub struct Args {
     #[arg(long, default_value_t = 0.03)]
     pub silent_threshold: f64,
     /// some silent frames adjacent to sounded frames are included to provide context. How many frames on either the side of speech should be included? That's this variable.
-    #[arg(long, default_value_t = 1)]
-    pub frame_margin: i32,
+    #[arg(long, default_value_t = 0)]
+    pub frame_margin: usize,
 }
 
 impl Args {
