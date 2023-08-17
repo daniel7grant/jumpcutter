@@ -83,6 +83,7 @@ frames = subprocess.run([
     "-of", "csv=p=0",
     INPUT_FILE
 ], capture_output=True).stdout.decode("utf-8")
+frames = re.sub("[^0-9]", "", frames)
 DURATION = int(frames)
 
 # Generate wav file to calculate peaks
