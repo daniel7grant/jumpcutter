@@ -6,7 +6,7 @@ extern crate ffmpeg_next as ffmpeg;
 mod args;
 mod fcpxml;
 
-use std::cmp::{max, min};
+use std::cmp::min;
 use std::io::Write;
 use std::path::PathBuf;
 
