@@ -16,6 +16,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          override: true
       - name: Restore cached dependencies
         uses: actions/cache@v3
         with:
@@ -50,6 +51,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          override: true
       - name: Restore cached dependencies
         uses: actions/cache@v3
         with:
