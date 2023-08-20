@@ -24,6 +24,8 @@ fn main() -> Result<()> {
 
     let args = Args::parse_args();
 
+    // TODO: maybe try rewriting it with Symphonia?
+
     // Get audio stream from the file
     let mut ictx = ffmpeg::format::input(&args.input_file)?;
     let audio_input = ictx
@@ -57,7 +59,7 @@ fn main() -> Result<()> {
                 match decoded.format() {
                     Sample::F32(sample::Type::Planar) => {
                         let mut data = decoded
-                            .plane::<f32>(1)
+                            .plane::<f32>(1) // TODO: how did I come to this number?
                             .iter()
                             .map(|d| d.abs() as f64)
                             .collect::<Vec<_>>();
@@ -133,11 +135,11 @@ fn main() -> Result<()> {
         ends.push(is_louds.len() - 1);
     }
 
-    dbg!(starts
-        .clone()
-        .into_iter()
-        .zip(ends.clone())
-        .collect::<Vec<_>>());
+    // dbg!(starts
+    //     .clone()
+    //     .into_iter()
+    //     .zip(ends.clone())
+    //     .collect::<Vec<_>>());
 
     let input = PathBuf::from(args.input_file).canonicalize()?;
 

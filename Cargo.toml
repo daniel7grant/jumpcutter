@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }
 eyre = "0.6.8"
-ffmpeg-next = "6.0.0"
+ffmpeg-next = { version = "6.0.0", features = ["static"] }
 
 [profile.release]
 strip = true
