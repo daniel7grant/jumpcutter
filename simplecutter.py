@@ -17,7 +17,7 @@ def getMaxVolume(s):
 
 def groupTuples(xs, n):
     return list(map(
-        lambda i: xs[i: min(i + n, len(xs))],
+        lambda i: xs[max(0, i - n): min(i + n, len(xs))],
         range(len(xs))
     ))
 
