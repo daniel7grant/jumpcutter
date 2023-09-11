@@ -1,4 +1,4 @@
-from typing import Self, Optional, Tuple, Union
+from typing import Self, Optional, Tuple, Union, Callable, Any
 
 Numeric = Union[int, float]
 def num(s: str) -> Numeric:
@@ -6,6 +6,12 @@ def num(s: str) -> Numeric:
         return int(s)
     except ValueError:
         return float(s)
+
+def listify(fn: Callable[[dict], Any], d: Union[dict, list[dict]]) -> list[dict]:
+    if type(d) is list:
+        return list(map(fn, d))
+    else:
+        return [fn(d)]
 
 class Rate:
     fps: int
@@ -100,8 +106,7 @@ class Filter:
         r.effectid = d["effect"]["effectid"]
         r.effecttype = d["effect"]["effecttype"]
         r.effectcategory = d["effect"]["effectcategory"]
-        parameters = d["effect"]["parameter"] if type(d["effect"]["parameter"]) is list else [d["effect"]["parameter"]]
-        r.parameters = list(map(FilterParameter.parse, parameters))
+        r.parameters = listify(FilterParameter.parse, d["effect"]["parameter"])
         return r
     
     def dump(self) -> dict:
@@ -158,7 +163,7 @@ class VideoFormat:
     height: int
     pixelaspectratio: str
     rate: Rate
-    codecname: str
+    codecname: Optional[str]
 
     def parse(d: dict) -> Self:
         d = d["samplecharacteristics"]
@@ -168,10 +173,11 @@ class VideoFormat:
         r.height = d["height"]
         r.pixelaspectratio = d["pixelaspectratio"]
         r.rate = Rate.parse(d["rate"])
-        r.codecname = d["codec"]["name"]
+        r.codecname = d["codec"].get("name", None)
         return r
 
     def dump(self) -> dict:
+        codecname = { "name": self.codecname } if self.codecname is not None else {}
         return {
             "samplecharacteristics": {
                 "width": self.width,
@@ -179,7 +185,7 @@ class VideoFormat:
                 "pixelaspectratio": self.pixelaspectratio,
                 "rate": self.rate.dump(),
                 "codec": {
-                    "name": self.codecname,
+                    **codecname,
                     "appspecificdata": {
                         "appname": "Final Cut Pro",
                         "appmanufacturer": "Apple Inc.",
@@ -285,8 +291,8 @@ class Clip:
         r.enabled = d["enabled"] == "TRUE"
         r.compositemode = d.get("compositemode", None)
         r.sourcetrack = SourceTrack.parse(d["sourcetrack"]) if "sourcetrack" in d else None
-        r.filters = list(map(Filter.parse, d["filter"]))
-        r.links = list(map(Link.parse, d["link"]))
+        r.filters = listify(Filter.parse, d["filter"])
+        r.links = listify(Link.parse, d["link"])
         r.comments = d.get("comments", None)
         return r
 
@@ -326,7 +332,7 @@ class Track:
         r = Track()
         r.enabled = d["enabled"] == "TRUE"
         r.locked = d["locked"] == "TRUE"
-        r.clips = list(map(Clip.parse, d.get("clipitem", [])))
+        r.clips = listify(Clip.parse, d.get("clipitem", []))
         return r
    
     def dump(self) -> dict:
@@ -357,9 +363,9 @@ class FcpXml:
         r.in_param = int(d["in"])
         r.out_param = int(d["out"])
         r.timecode = TimeCode.parse(d["timecode"])
-        r.video_tracks = list(map(Track.parse, d["media"]["video"]["track"]))
+        r.video_tracks = listify(Track.parse, d["media"]["video"]["track"])
         r.video_format = VideoFormat.parse(d["media"]["video"]["format"])
-        r.audio_tracks = list(map(Track.parse, d["media"]["audio"]["track"]))
+        r.audio_tracks = listify(Track.parse, d["media"]["audio"]["track"])
         return r
 
     def dump(self) -> dict:
