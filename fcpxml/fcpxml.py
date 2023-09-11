@@ -310,6 +310,12 @@ class Clip:
             "link": list(map(lambda l: l.dump(), self.links)),
             "comments": self.comments,
         }
+    
+    def is_linked_to(self, id: str) -> bool:
+        for link in self.links:
+            if link.ref == id:
+                return True
+        return False
 
 class Track:
     clips: list[Clip]
