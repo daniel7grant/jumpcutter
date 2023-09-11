@@ -58,14 +58,15 @@ for i, (video, audio) in enumerate(clips):
         # The total slide should get bigger
         slide += cut
 
-        # Video should be pushed back, and cut from the beginning
-        video.start -= slide - cut
-        video.end -= slide
+        # Video should be cut from the beginning
+        video.start += cut
         video.in_param += cut
 
-        # Audio should be pushed back
-        audio.start -= slide
-        audio.end -= slide
+    # Slide the clips back so there are no holes
+    video.start -= slide
+    video.end -= slide
+    audio.start -= slide
+    audio.end -= slide
 
     # Add videos to track and audios to separate tracks
     videoclips1.append(video)
